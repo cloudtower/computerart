@@ -4,6 +4,7 @@
 A Simple Random Fractal Tree
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+import argparse
 import numpy as np
 import sys
 
@@ -16,9 +17,9 @@ ITERATIONS = 16  # total number of iterations
 ROOT_COLOR = np.array([0.15, 0.075, 0.0])  # root branch color
 TRUNK_LEN = 200  # initial length of the trunk
 TRUNK_RAD = 10.0  # initial radius of the trunk
-GRASS_LEN = 4 # initial length of the grass
-GRASS_RAD = 0.6 # initial radius of the grass
-GRASS_COLOR = [0.4, 0.7, 0] # initial color of grass
+GRASS_LEN = 4  # initial length of the grass
+GRASS_RAD = 0.6  # initial radius of the grass
+GRASS_COLOR = [0.4, 0.7, 0]  # initial color of grass
 THETA = np.pi / 2  # initial angle of the branch
 ANGLE = np.pi / 2  # angle between branches in the same level
 PERTURB = 5.0  # perturb the angle a little to make the tree look random
@@ -30,7 +31,6 @@ GRASS_LOWER_COUNT = 15000
 WIDTH = 5040
 HEIGHT = 2160
 
-import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--mode", type=str)
 args = parser.parse_args()
@@ -47,18 +47,51 @@ if args.mode == "debug_grass":
 
 ROOT = (WIDTH / 2.0, HEIGHT)
 
+# Return an interpolation of the two colors `ROOT_COLOR` and `leaf_color`
+def get_color(level, leaf_color):
+    a = float(level) / ITERATIONS
+    return a * ROOT_COLOR + (1 - a) * leaf_color
+
+
+# Return the line width of a given level.
+def get_line_width(level, trunk_rad):
+    return max(1, (trunk_rad / ((ITERATIONS - level) / 2 + 1)))
+
+
+# Return a random branch length depending on level and angle
+def get_random_branch_length(level, angle, t):
+    randt  = min(1, (np.random.random() + (level / (ITERATIONS * 5))))
+    randt *= 1 / (1 + np.abs(np.pi / 2 - angle) / 6)
+    randt *= t
+    randt *= 1.5 if level == ITERATIONS else 1
+    return randt
+
+
+# Return a random grass length
+def get_random_grass_length(length_init, angle):
+    length = np.random.normal(
+        loc=(length_init * (1 / (np.abs(angle - np.pi / 2) * 4 + 1))),
+        scale=length_init / 2
+    )
+    return max(0, length) ** 1.5
+
+
+# Return a random grass color
+def get_random_grass_color():
+    return np.array([GRASS_COLOR[0] + (np.random.random() - 0.5) * 0.6,
+                     GRASS_COLOR[1] + (np.random.random() - 0.5) * 0.25, GRASS_COLOR[2]])
+
+
+# Generate and draw a bunch of grass
 def grass(ctx, root, width_init, length_init):
     for i in range(int(np.random.random() * 4 + 2)):
         x0, y0 = root
         angle1 = np.random.normal(loc=(np.pi / 2), scale=0.3)
         angle2 = angle1 + np.random.random() * (angle1 - np.pi / 2)
 
-        length = np.random.normal(loc=(length_init * (1 / (np.abs(angle1 - np.pi / 2) * 4 + 1))),
-                                  scale=length_init / 2)
-        length = max(0, length) ** 1.5
+        length = get_random_grass_length(length_init, angle1)
         width = (np.random.random() + 0.5) * width_init
-        color = np.array([GRASS_COLOR[0] + (np.random.random() - 0.5) * 0.6, 
-                          GRASS_COLOR[1] + (np.random.random() - 0.5) * 0.25, GRASS_COLOR[2]])
+        color = get_random_grass_color()
 
         x1, y1 = x0 + length * np.cos(angle1), y0 - length * np.sin(angle1)
         x2, y2 = x1 + length * np.cos(angle2), y1 - length * np.sin(angle2)
@@ -73,39 +106,14 @@ def grass(ctx, root, width_init, length_init):
         ctx.stroke()
 
 
-def get_color(level, leaf_color):
-    """
-    Return an interpolation of the two colors `ROOT_COLOR` and `leaf_color`.
-    """
-    a = float(level) / ITERATIONS
-    return a * ROOT_COLOR + (1 - a) * leaf_color
-
-
-def get_line_width(level, trunk_rad):
-    """Return the line width of a given level."""
-    return max(1, (trunk_rad / ((ITERATIONS - level) / 2 + 1)))
-
-
-def fractal_tree(ctx,         # a cairo context to draw on
-                 level,       # current level in the iterations
-                 start,       # (x, y) coordinates of the start of this trunk
-                 t,           # current trunk length
-                 leaf_color,  # leaf color
-                 trunk_rad,   # initial trunk radius
-                 r,           # factor to contract the trunk in each iteration
-                 theta,       # orientation of current trunk
-                 angle,       # angle between branches in the same level
-                 perturb,     # perturb the angle
-                 ):
+# Generate and draw a fractal tree
+def fractal_tree(ctx, level, start, t, leaf_color, trunk_rad, r, theta, angle, perturb):
     if level == 0:
         return
 
     x0, y0 = start
 
-    randt  = min(1, (np.random.random() + (level / (ITERATIONS * 5))))
-    randt *= 1 / (1 + np.abs(np.pi / 2 - theta) / 6)
-    randt *= t
-    randt *= 1.5 if level == ITERATIONS else 1
+    randt = get_random_branch_length(level, theta, t)
     x, y = x0 + randt * np.cos(theta), y0 - randt * np.sin(theta)
 
     color = get_color(level, leaf_color)
