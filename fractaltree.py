@@ -15,15 +15,21 @@ except ImportError:
 
 ITERATIONS = 16  # total number of iterations
 ROOT_COLOR = np.array([0.15, 0.075, 0.0])  # root branch color
+LEAF_COLOR = [1.0, 1.0, 0.2]
+LEAF_COLOR_WEIGHTS = [0.2, 0.2, 0.2]
 TRUNK_LEN = 200  # initial length of the trunk
 TRUNK_RAD = 10.0  # initial radius of the trunk
 GRASS_LEN = 4  # initial length of the grass
 GRASS_RAD = 0.6  # initial radius of the grass
 GRASS_COLOR = [0.4, 0.7, 0]  # initial color of grass
+GRASS_COLOR_WEIGHTS = [0.6, 0.25, 0]
 THETA = np.pi / 2  # initial angle of the branch
 ANGLE = np.pi / 2  # angle between branches in the same level
 PERTURB = 5.0  # perturb the angle a little to make the tree look random
 RATIO = 0.8  # contraction factor between successive trunks
+
+TRUNK_BOOST = 1.5  # boosting factor of trunk length
+GRASS_ANGLE_SD = 0.3  # grass angle standard deviation
 
 TREE_COUNT = 200
 GRASS_LOWER_COUNT = 15000
@@ -53,6 +59,11 @@ def get_color(level, leaf_color):
     return a * ROOT_COLOR + (1 - a) * leaf_color
 
 
+# Return random leaf color
+def get_random_leaf_color():
+    return np.array([LEAF_COLOR[i] - np.random.random() * LEAF_COLOR_WEIGHTS[i] for i in range(3)])
+
+
 # Return the line width of a given level.
 def get_line_width(level, trunk_rad):
     return max(1, (trunk_rad / ((ITERATIONS - level) / 2 + 1)))
@@ -63,7 +74,7 @@ def get_random_branch_length(level, angle, t):
     randt  = min(1, (np.random.random() + (level / (ITERATIONS * 5))))
     randt *= 1 / (1 + np.abs(np.pi / 2 - angle) / 6)
     randt *= t
-    randt *= 1.5 if level == ITERATIONS else 1
+    randt *= TRUNK_BOOST if level == ITERATIONS else 1
     return randt
 
 
@@ -78,8 +89,7 @@ def get_random_grass_length(length_init, angle):
 
 # Return a random grass color
 def get_random_grass_color():
-    return np.array([GRASS_COLOR[0] + (np.random.random() - 0.5) * 0.6,
-                     GRASS_COLOR[1] + (np.random.random() - 0.5) * 0.25, GRASS_COLOR[2]])
+    return np.array([GRASS_COLOR[i] + (np.random.random() - 0.5) * GRASS_COLOR_WEIGHTS[i] for i in range(3)])
 
 
 # Generate and draw a bunch of grass
@@ -149,8 +159,7 @@ def main():
         sys.stdout.write(f"{i} / {TREE_COUNT} \r")
         root_x = (np.random.random() - 0.5) * (WIDTH - 50)
         root = (ROOT[0] + root_x, ROOT[1])
-        leaf_color = np.array([1.0 - np.random.random() * 0.2,
-                               1.0 - np.random.random() * 0.2, 0.2])
+        leaf_color = get_random_leaf_color()
         trunk_rad = TRUNK_RAD + ((np.random.random() - 0.5) * (TRUNK_RAD / 4))
         trunk_len = TRUNK_LEN + ((np.random.random() - 0.5) * (TRUNK_LEN / 4))
         fractal_tree(ctx, ITERATIONS, root, trunk_len, leaf_color, trunk_rad,
