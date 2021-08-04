@@ -16,16 +16,16 @@ ITERATIONS = 16  # total number of iterations
 ROOT_COLOR = np.array([0.15, 0.075, 0.0])  # root branch color
 TRUNK_LEN = 200  # initial length of the trunk
 TRUNK_RAD = 10.0  # initial radius of the trunk
-GRASS_LEN = 28 # initial length of the grass
+GRASS_LEN = 4 # initial length of the grass
 GRASS_RAD = 0.6 # initial radius of the grass
-GRASS_COLOR = [0.4, 0.7, 0]
+GRASS_COLOR = [0.4, 0.7, 0] # initial color of grass
 THETA = np.pi / 2  # initial angle of the branch
 ANGLE = np.pi / 2  # angle between branches in the same level
 PERTURB = 5.0  # perturb the angle a little to make the tree look random
 RATIO = 0.8  # contraction factor between successive trunks
 
 TREE_COUNT = 200
-GRASS_LOWER_COUNT = 25000
+GRASS_LOWER_COUNT = 15000
 
 WIDTH = 5040
 HEIGHT = 2160
@@ -40,12 +40,12 @@ if args.mode == "debug_grass":
     GRASS_LOWER_COUNT = 1
 
     WIDTH = 400
-    HEIGHT = 240
+    HEIGHT = 800
 
-    GRASS_LEN = 50
+    GRASS_LEN = 20
     GRASS_RAD = 3.0
 
-ROOT = (WIDTH / 2.0, HEIGHT)  # pixel position of the root
+ROOT = (WIDTH / 2.0, HEIGHT)
 
 def grass(ctx, root, width_init, length_init):
     for i in range(int(np.random.random() * 4 + 2)):
@@ -53,8 +53,9 @@ def grass(ctx, root, width_init, length_init):
         angle1 = np.random.normal(loc=(np.pi / 2), scale=0.3)
         angle2 = angle1 + np.random.random() * (angle1 - np.pi / 2)
 
-        length = np.random.normal(loc=length_init * (1 / (np.abs(angle1 - np.pi / 2) * 8 + 1)),
-                                  scale=length_init / 4)
+        length = np.random.normal(loc=(length_init * (1 / (np.abs(angle1 - np.pi / 2) * 4 + 1))),
+                                  scale=length_init / 2)
+        length = max(0, length) ** 1.5
         width = (np.random.random() + 0.5) * width_init
         color = np.array([GRASS_COLOR[0] + (np.random.random() - 0.5) * 0.6, 
                           GRASS_COLOR[1] + (np.random.random() - 0.5) * 0.25, GRASS_COLOR[2]])
@@ -100,7 +101,7 @@ def fractal_tree(ctx,         # a cairo context to draw on
         return
 
     x0, y0 = start
-    # randomize the length
+
     randt  = min(1, (np.random.random() + (level / (ITERATIONS * 5))))
     randt *= 1 / (1 + np.abs(np.pi / 2 - theta) / 6)
     randt *= t
